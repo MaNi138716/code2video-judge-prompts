@@ -10,11 +10,12 @@ Live Evaluation Dashboard: [code2video-arena-elo-review.netlify.app](https://cod
 
 In the Code2Video Arena, candidate models (such as Claude Sonnet 5.5, GPT-6.1 Sol, GLM-5.3, Qwen 3.8 Max) generate complete HTML+GSAP compositions from creative text briefs, rendered into 1080p MP4 videos.
 
-We compared automatic LLM Judge evaluations against **95 human-annotated head-to-head pairs**:
-- **Baseline Agreement (v1 prompt):** 52% overall (49/95), 63% on decisive pairs (47/75).
-- **Defect-First Priority (v2 prompt):** 45% overall (43/95), 61% on decisive pairs (43/70).
+We compared automatic LLM Judge evaluations against **98 human-annotated head-to-head pairs**:
+- **Baseline Agreement (v1 prompt):** 57% overall (56/98), 69% on decisive pairs (53/77).
+- **Defect-First Priority (v2 prompt):** 49% overall (48/98), 67% on decisive pairs (47/70).
+- **10 fps Sampling (v1_fps10):** 54% overall (53/98), 65% on decisive pairs (50/77).
 - **Re-run Stability:** Re-running the exact same configuration at `temperature=0` flips 5–7 of 46 verdicts, indicating that small prompt variations are within natural stochastic noise.
-- **Sampling Rate Finding:** Evaluating at **10 fps** vs default (~1 fps) enables the model to see motion fluidity and typography details, but human agreement remains at ~50%.
+- **Sampling Rate Finding:** Evaluating at **10 fps** vs default (~1 fps) enables the model to see motion fluidity and typography details, but human agreement remains at ~50–60%.
 - **Root Cause of Divergence:** Human reviewers prioritize overall typography aesthetics, brand polish, and visual balance, whereas LLMs heavily prioritize strict literal compliance with the brief's textual directives.
 
 ---
@@ -22,7 +23,7 @@ We compared automatic LLM Judge evaluations against **95 human-annotated head-to
 ## 2. Prompts
 
 ### Prompt v1: Balanced Multimodal Judge (Baseline)
-This is the baseline prompt used to evaluate the 95 human-labeled pairs. It balances brief fidelity, visual design, motion quality, and overall polish without enforcing a strict hierarchy.
+This is the baseline prompt used to evaluate the 98 human-labeled pairs. It balances brief fidelity, visual design, motion quality, and overall polish without enforcing a strict hierarchy.
 
 ```text
 You are an expert judge of short promotional motion-graphics videos that AI models generated from a text brief. You will get the brief, then Video A, then Video B. Both videos answer the same brief.
@@ -50,11 +51,11 @@ Reply with JSON only, no markdown: {"winner": "A" | "B" | "tie", "reason": "one 
 
 ## 3. Baseline Validation: Qwen 27B (10 Complete Cases)
 
-To test the LLM judge against out-of-distribution, weaker model outputs, we evaluated **qwen3.8-27b** (a smaller open-weights model) across 10 complete cases against the top non-Qwen reference model (Claude Sonnet 5.5, GPT-6.1 Sol, or GLM-5.3).
+To test the LLM judge against out-of-distribution, weaker model outputs, we evaluated **qwen3.8-27b** (a smaller open-weights model) across 10 complete cases against the top non-Qwen reference model (Claude Sonnet 5.5 or GPT-6.1 Sol).
 
 **Overall Record (10 fps):**
-- **Reference Model Won:** 6 / 10 cases (Claude / GPT-6.1 won decisively)
-- **Qwen 27B Won:** 2 / 10 cases (both vs GLM-5.3 due to reference flaws: missing word spaces and abrupt cut)
+- **Reference Model Won:** 8 / 10 cases (Claude Sonnet 5.5 / GPT-6.1 Sol won decisively)
+- **Qwen 27B Won:** 0 / 10 cases
 - **Tie / Order Flipped:** 2 / 10 cases
 
 ### Case-by-Case Breakdown
@@ -62,15 +63,15 @@ To test the LLM judge against out-of-distribution, weaker model outputs, we eval
 | Case | Reference Model | Judge Verdict (10 fps) | Identified Defect / Analysis |
 | :--- | :--- | :--- | :--- |
 | **Hook_04** | GPT-6.1 Sol | 🏆 **Reference Won** | Qwen text typo: wrote `"INSANELY HAD."` instead of `"INSANELY HARD."` |
+| **Problem_02** | GPT-6.1 Sol | 🏆 **Reference Won** | Qwen awkward text collision with `'What if'` directly overlapping lingering text |
 | **Key_Feature_11** | Claude Sonnet 5.5 | 🏆 **Reference Won** | Qwen element expansion glitch; `'Generating...'` pill misplaced below input bar |
+| **Benefits_03** | GPT-6.1 Sol | 🏆 **Reference Won** | Qwen persistent stray residual glyphs floating awkwardly around frame during phrase holds |
 | **Key_Feature_34** | Claude Sonnet 5.5 | 🏆 **Reference Won** | Qwen text size too small with low contrast; generic placeholder avatars |
 | **Social_Proof_01**| GPT-6.1 Sol | 🏆 **Reference Won** | Qwen drew a generic horn icon instead of the brand's stylized Trumpet mark |
 | **CTA_07** | Claude Sonnet 5.5 | 🏆 **Reference Won** | Qwen used an inaccurate letter 'B' instead of Butter rounded-hexagon ring mark |
 | **Benefits_09** | Claude Sonnet 5.5 | 🏆 **Reference Won** | Qwen omitted an entire scene (`"Make money"`), leaving the second half mostly empty |
 | **Product_Intro_01**| Claude Sonnet 5.5| ⚖️ **Tie / Flipped** | Qwen used 2D compressed rings vs Claude's 3D perspective; order flipped |
 | **Brand_Outro_01** | Claude Sonnet 5.5 | ⚖️ **Tie / Flipped** | Qwen button had a subtle pop/flash, but maintained overall solid layout |
-| **Problem_02** | GLM-5.3 | 🏆 **Qwen 27B Won** | GLM abruptly cut to black, whereas Qwen rendered a smooth camera zoom transition |
-| **Benefits_03** | GLM-5.3 | 🏆 **Qwen 27B Won** | GLM omitted spaces (`"NoAPIKeys"`, `"SimpleUX"`), whereas Qwen maintained proper spacing |
 
 ---
 
