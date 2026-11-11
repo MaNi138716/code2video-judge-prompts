@@ -14,7 +14,7 @@ We compared automatic LLM Judge evaluations against **95 human-annotated head-to
 - **Baseline Agreement (v1 prompt):** 52% overall (49/95), 63% on decisive pairs (47/75).
 - **Defect-First Priority (v2 prompt):** 45% overall (43/95), 61% on decisive pairs (43/70).
 - **Re-run Stability:** Re-running the exact same configuration at `temperature=0` flips 5–7 of 46 verdicts, indicating that small prompt variations are within natural stochastic noise.
-- **Sampling Rate Finding:** The default API video sampling (~1 frame/sec) is insufficient for motion smoothness (catches only 3/10 stutter defects). Sampling at **10 fps** increases motion defect detection to 9/10 (98% pass rate on synthetic unit tests), but does not significantly shift the human agreement rate.
+- **Sampling Rate Finding:** Evaluating at **10 fps** vs default (~1 fps) enables the model to see motion fluidity and typography details, but human agreement remains at ~50%.
 - **Root Cause of Divergence:** Human reviewers prioritize overall typography aesthetics, brand polish, and visual balance, whereas LLMs heavily prioritize strict literal compliance with the brief's textual directives.
 
 ---
@@ -48,7 +48,33 @@ Reply with JSON only, no markdown: {"winner": "A" | "B" | "tie", "reason": "one 
 
 ---
 
-## 3. Evaluation Protocol
+## 3. Baseline Validation: Qwen 27B (10 Complete Cases)
+
+To test the LLM judge against out-of-distribution, weaker model outputs, we evaluated **qwen3.8-27b** (a smaller open-weights model) across 10 complete cases against the top non-Qwen reference model (Claude Sonnet 5.5, GPT-6.1 Sol, or GLM-5.3).
+
+**Overall Record (10 fps):**
+- **Reference Model Won:** 6 / 10 cases (Claude / GPT-6.1 won decisively)
+- **Qwen 27B Won:** 2 / 10 cases (both vs GLM-5.3 due to reference flaws: missing word spaces and abrupt cut)
+- **Tie / Order Flipped:** 2 / 10 cases
+
+### Case-by-Case Breakdown
+
+| Case | Reference Model | Judge Verdict (10 fps) | Identified Defect / Analysis |
+| :--- | :--- | :--- | :--- |
+| **Hook_04** | GPT-6.1 Sol | 🏆 **Reference Won** | Qwen text typo: wrote `"INSANELY HAD."` instead of `"INSANELY HARD."` |
+| **Key_Feature_11** | Claude Sonnet 5.5 | 🏆 **Reference Won** | Qwen element expansion glitch; `'Generating...'` pill misplaced below input bar |
+| **Key_Feature_34** | Claude Sonnet 5.5 | 🏆 **Reference Won** | Qwen text size too small with low contrast; generic placeholder avatars |
+| **Social_Proof_01**| GPT-6.1 Sol | 🏆 **Reference Won** | Qwen drew a generic horn icon instead of the brand's stylized Trumpet mark |
+| **CTA_07** | Claude Sonnet 5.5 | 🏆 **Reference Won** | Qwen used an inaccurate letter 'B' instead of Butter rounded-hexagon ring mark |
+| **Benefits_09** | Claude Sonnet 5.5 | 🏆 **Reference Won** | Qwen omitted an entire scene (`"Make money"`), leaving the second half mostly empty |
+| **Product_Intro_01**| Claude Sonnet 5.5| ⚖️ **Tie / Flipped** | Qwen used 2D compressed rings vs Claude's 3D perspective; order flipped |
+| **Brand_Outro_01** | Claude Sonnet 5.5 | ⚖️ **Tie / Flipped** | Qwen button had a subtle pop/flash, but maintained overall solid layout |
+| **Problem_02** | GLM-5.3 | 🏆 **Qwen 27B Won** | GLM abruptly cut to black, whereas Qwen rendered a smooth camera zoom transition |
+| **Benefits_03** | GLM-5.3 | 🏆 **Qwen 27B Won** | GLM omitted spaces (`"NoAPIKeys"`, `"SimpleUX"`), whereas Qwen maintained proper spacing |
+
+---
+
+## 4. Evaluation Protocol
 
 ### Multimodal Request Structure
 Requests are sent to the Gemini API (`/models/gemini-3.8-flash:generateContent`) with `temperature: 0` and `responseMimeType: "application/json"`.
@@ -90,7 +116,7 @@ The request body contains sequential multimodal parts:
 ```
 
 ### Mitigating Position Bias (Bidirectional Blind Test)
-LLMs exhibit significant position bias (tending to prefer the first or second video regardless of content). To ensure scientific validity, every matchup is evaluated **twice**:
+Every matchup is evaluated **twice** by swapping Video A and Video B:
 - **Run 1:** Video A = Candidate X, Video B = Candidate Y
 - **Run 2:** Video A = Candidate Y, Video B = Candidate X
 
@@ -99,17 +125,6 @@ LLMs exhibit significant position bias (tending to prefer the first or second vi
 - If Run 1 picks B and Run 2 picks A $\rightarrow$ **Candidate Y wins**.
 - If Run 1 and Run 2 both pick A (or both pick B) $\rightarrow$ **Flipped / Position Bias (recorded as Tie)**.
 - If either run returns `tie` $\rightarrow$ **Recorded as Tie**.
-
----
-
-## 4. Benchmark Performance Matrix
-
-| Configuration | Video Sampling | Smoke Pass Rate (Objective Defect Check) | Agreement (All 95 Human Pairs) | Agreement (Decisive Pairs) | Order Flips (Position Bias) |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Prompt v1 (Baseline)** | Default (~1 fps) | 53 / 60 (88%) | **49 / 95 (52%)** | 47 / 75 (63%) | 18 / 95 |
-| **Prompt v2 (Defect-First)**| Default (~1 fps) | 54 / 60 (90%) | 43 / 95 (45%) | 43 / 70 (61%) | 21 / 95 |
-| **Prompt v1 + 10 fps** | 10 fps | 58 / 60 (97%) | 45 / 95 (47%) | 44 / 75 (59%) | 16 / 95 |
-| **Prompt v2 + 10 fps** | 10 fps | **59 / 60 (98%)** | 47 / 95 (49%) | 46 / 73 (63%) | 19 / 95 |
 
 ---
 
